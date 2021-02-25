@@ -1,0 +1,30 @@
+.header {
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    display: flex;
+    border-bottom: 1px solid #eee;
+    .headerContainer {
+        width: 1200px;
+        margin: 0 auto;
+        display: flex;
+    }
+    .headerBox {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .loginBtn {
+        width: 150px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .profile {
+        display: flex;
+        .logoutBtn {
+            margin-right: 20px;
+            cursor: pointer;
+        }
+    }
+}
