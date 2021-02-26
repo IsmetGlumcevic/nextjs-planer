@@ -4,16 +4,20 @@ import styles from "../styles/Home.module.scss";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
-import { UserContext } from "../context/UserContext";
+import { StoreContext } from "../context/StoreContext";
 import fire from "../config/fire-config";
+import { RRule, RRuleSet, rrulestr } from "rrule";
 
 moment.locale("bs-BS");
 const localizer = momentLocalizer(moment);
 
 export default function Home() {
-  const { loggedIn, userInfo } = useContext(UserContext);
+  const { items, setItems } = useContext(StoreContext);
   const [events, setEvents] = useState([]);
-  const [loader, setLoader] = useState(true);
+  const [loader, setLoader] = useState(false);
+  const [boja, setBoja] = useState('#dddddd');
+  const [repeateType, setRepeateType] = useState('NONE');
+  const [notification, setNotification] = useState(null);
 
   const handleSelect = ({ start, end }) => {
     const title = window.prompt("New Event name");
@@ -24,130 +28,223 @@ export default function Home() {
       allDay: false,
     };
     if (title) {
-      setEvent((oldEvent) => [...oldEvent, eventObj]);
+      setEvents((oldEvent) => [...oldEvent, eventObj]);
+      saveEvent(eventObj)
     }
   };
 
-  useEffect(() => {}, []);
-
-  const fetchingEvents = async () => {
-    console.log('tuuu')
-    let lists = [];
-    try {
-      // await the promise
-      const querySnapshot = await fire.firestore()
-      .collection("events")
-      .doc(userInfo.uid)
-      .collection("eventrows")
-      .get();
-
-      querySnapshot.forEach((doc) => {
-        console.log("lista", doc.data());
-
-        const {
-          title,
-          summary,
-          date,
-          startDate,
-          endDate,
-          marked,
-          selected,
-          color,
-          dotColor,
-          repeateType,
-          repeate,
-        } = doc.data();
-        let start = startDate.toDate().toString();
-        let end = endDate.toDate().toString();
-        let formatStart = moment(start).format("yy-MM-DD hh:mm:ss");
-        let formatEnd = moment(end).format("yy-MM-DD hh:mm:ss");
-        lists.push({
-          id: doc.id,
-          textColor: dotColor,
-          start: start,
-          end: end,
-          startDate,
-          endDate,
-          title,
-          summary,
-          date,
-          marked,
-          selected,
-          color,
-          repeateType,
-          repeate,
-        });
-        console.log("lists", lists);
+  const saveEvent = async (event) => {
+    let user = await fire.auth().currentUser;
+    let db = fire.firestore();
+    return db
+      .collection('events')
+      .doc(user.uid)
+      .collection('eventrows')
+      .doc()
+      .set({
+        title: event.title,
+        summary: 'summary',
+        date: new Date(),
+        startDate: event.start,
+        endDate: event.end,
+        createdAt: new Date(),
+        selected: true,
+        marked: true,
+        duration: '',
+        color: boja,
+        dotColor: '#fffff',
+        textColor: '#33333',
+        repeateType: repeateType,
+        repeate: repeateType == 'NONE' ? false : true,
+      })
+      .then(() => {
+        setNotification('Uspješno ste snimili event!');
       });
-      console.log(lists);
-      setEvents(lists);
-      setLoader(false);
-    } catch (error) {
-      // catch part using try/catch
-      console.log("Error getting documents: ", error);
-      // return something else here, or an empty props, or throw an exception or whatever
+  };
+
+  const fun = async () => {
+    let user = await fire.auth().currentUser;
+    let db = fire.firestore();
+    if (user) {
+      const lists = [];
+      const data = await db.collection("events")
+        .doc(user.uid)
+        .collection("eventrows")
+        .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            const {
+              title,
+              summary,
+              date,
+              startDate,
+              endDate,
+              marked,
+              selected,
+              color,
+              dotColor,
+              repeateType,
+              repeate,
+            } = doc.data();
+            let start = startDate.toDate().toString();
+            let end = endDate.toDate().toString();
+            let formatStart = moment(start).format("yy-MM-DD hh:mm:ss");
+            let formatEnd = moment(end).format("yy-MM-DD hh:mm:ss");
+            lists.push({
+              id: doc.id,
+              textColor: dotColor,
+              start: start,
+              end: end,
+              startDate,
+              endDate,
+              title,
+              summary,
+              date,
+              marked,
+              selected,
+              color,
+              repeateType,
+              repeate,
+            });
+          });
+          const repeateList = lists.filter((list) => list.repeate == true);
+          const repeatLists = [];
+          const repeateListObj = repeateList.map((item) => {
+            if (item.repeateType == "DAILY") {
+              const rule = new RRule({
+                freq: RRule.DAILY,
+                dtstart: new Date(item.start),
+                until: new Date(
+                  new Date().setFullYear(new Date().getFullYear() + 3)
+                ),
+              });
+              let rullAll = rule.all();
+              rullAll.map((rul) => {
+                let isoDate = new Date(rul);
+                let newStart = rul;
+                let newDate = isoDate.toISOString().split("T")[0];
+                repeatLists.push({
+                  id: item.id,
+                  textColor: item.dotColor,
+                  start: newStart,
+                  end: item.end,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  title: item.title,
+                  summary: item.summary,
+                  date: newDate,
+                  marked: item.marked,
+                  selected: "",
+                  color: item.color,
+                  repeateType: item.repeateType,
+                  repeate: item.repeate,
+                });
+              });
+            } else if (item.repeateType == "WEEKLY") {
+              const rule = new RRule({
+                freq: RRule.WEEKLY,
+                dtstart: new Date(item.start),
+                until: new Date(
+                  new Date().setFullYear(new Date().getFullYear() + 3)
+                ),
+              });
+              let rullAll = rule.all();
+              rullAll.map((rul) => {
+                let isoDate = new Date(rul);
+                let newStart = rul;
+                let newDate = isoDate.toISOString().split("T")[0];
+                repeatLists.push({
+                  id: item.id,
+                  textColor: item.dotColor,
+                  start: newStart,
+                  end: item.end,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  title: item.title,
+                  summary: item.summary,
+                  date: newDate,
+                  marked: item.marked,
+                  selected: "",
+                  color: item.color,
+                  repeateType: item.repeateType,
+                  repeate: item.repeate,
+                });
+              });
+            } else if (item.repeateType == "MONTHLY") {
+              const rule = new RRule({
+                freq: RRule.MONTHLY,
+                dtstart: new Date(item.start),
+                until: new Date(
+                  new Date().setFullYear(new Date().getFullYear() + 3)
+                ),
+              });
+              let rullAll = rule.all();
+              rullAll.map((rul) => {
+                let isoDate = new Date(rul);
+                let newStart = rul;
+                let newDate = isoDate.toISOString().split("T")[0];
+                repeatLists.push({
+                  id: item.id,
+                  textColor: item.dotColor,
+                  start: newStart,
+                  end: item.end,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  title: item.title,
+                  summary: item.summary,
+                  date: newDate,
+                  marked: item.marked,
+                  selected: item.selected,
+                  color: item.color,
+                  repeateType: item.repeateType,
+                  repeate: item.repeate,
+                });
+              });
+            } else if (item.repeateType == "YEARLY") {
+              const rule = new RRule({
+                freq: RRule.YEARLY,
+                dtstart: new Date(item.start),
+                until: new Date(
+                  new Date().setFullYear(new Date().getFullYear() + 3)
+                ),
+              });
+              let rullAll = rule.all();
+              rullAll.map((rul) => {
+                let isoDate = new Date(rul);
+                let newStart = rul;
+                let newDate = isoDate.toISOString().split("T")[0];
+                repeatLists.push({
+                  id: item.id,
+                  textColor: item.dotColor,
+                  start: newStart,
+                  end: item.end,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  title: item.title,
+                  summary: item.summary,
+                  date: newDate,
+                  marked: item.marked,
+                  selected: item.selected,
+                  color: item.color,
+                  repeateType: item.repeateType,
+                  repeate: item.repeate,
+                });
+              });
+            }
+          });
+          setEvents(lists);
+          setLoader(false);
+          setItems(lists)
+        });
+    } else {
+      console.log("nema");
     }
-
-    // const lists = [];
-    // fire
-    //   .firestore()
-    //   .collection("events")
-    //   .doc(userInfo.uid)
-    //   .collection("eventrows")
-    //   //.onSnapshot(querySnapshot => {
-    //   .get()
-    //   .then((querySnapshot) => {
-    //     querySnapshot.forEach((doc) => {
-    //       console.log("lista", doc.data());
-
-    //       const {
-    //         title,
-    //         summary,
-    //         date,
-    //         startDate,
-    //         endDate,
-    //         marked,
-    //         selected,
-    //         color,
-    //         dotColor,
-    //         repeateType,
-    //         repeate,
-    //       } = doc.data();
-    //       let start = startDate.toDate().toString();
-    //       let end = endDate.toDate().toString();
-    //       let formatStart = moment(start).format("yy-MM-DD hh:mm:ss");
-    //       let formatEnd = moment(end).format("yy-MM-DD hh:mm:ss");
-    //       lists.push({
-    //         id: doc.id,
-    //         textColor: dotColor,
-    //         start: start,
-    //         end: end,
-    //         startDate,
-    //         endDate,
-    //         title,
-    //         summary,
-    //         date,
-    //         marked,
-    //         selected,
-    //         color,
-    //         repeateType,
-    //         repeate,
-    //       });
-    //       console.log('lists', lists)
-    //     });
-    //     return lists
-    //   })
-    //   .then((lists) => {
-    //     console.log(lists)
-    //     setEvents(lists);
-    //     setLoader(false);
-    //   })
   };
 
   useEffect(() => {
     setTimeout(() => {
-      fetchingEvents();
-    }, 6000)
+      fun();
+    }, 2000);
   }, []);
 
   return (
@@ -158,12 +255,13 @@ export default function Home() {
       </Head>
       <main className={styles.main}>
         <div>
+          {notification}
           {loader ? (
             <h1>loading......</h1>
           ) : (
             <Calendar
               localizer={localizer}
-              events={events}
+              events={items}
               selectable
               onSelectEvent={(event) => alert(event.title)}
               onSelectSlot={handleSelect}
