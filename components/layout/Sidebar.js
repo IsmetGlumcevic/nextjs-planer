@@ -2,10 +2,12 @@ import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/router";
 import styles from "../../styles/Home.module.scss";
 import { UserContext } from "../../context/UserContext";
+import { StoreContext } from "../../context/StoreContext";
 import Link from "next/link";
 
 const Sidebar = () => {
   const { loggedIn, userInfo } = useContext(UserContext);
+  const { opModal } = useContext(StoreContext);
   const router = useRouter();
 
   return (
@@ -17,7 +19,7 @@ const Sidebar = () => {
               <a className={styles.sidebarLinks}>Kalendar</a>
             </Link>
             {router.pathname == "/" ? (
-            <div className={styles.sidebarLink}>Napravi događaj</div>
+            <div onClick={opModal} className={styles.sidebarLink}>Napravi događaj</div>
             ) : null }
             <Link href="/todos">
               <a className={styles.sidebarLinks}>Zadaci</a>

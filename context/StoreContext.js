@@ -9,6 +9,7 @@ export const StoreContext = createContext();
 const StoreContextProvider = (props) => {
   const { loggedIn, userInfo } = useContext(UserContext);
   const [items, setItems] = useState([]);
+  const [modal, setModal] = useState(false);
 
   const refreshData = () => {
     const lists = [];
@@ -187,6 +188,14 @@ const StoreContextProvider = (props) => {
     setItems(result);
   };
 
+  const opModal = () => {
+    setModal(true)
+  }
+
+  const clModal = () => {
+    setModal(false)
+  }
+
   useEffect(() => {
     console.log(loggedIn, userInfo);
   });
@@ -197,6 +206,9 @@ const StoreContextProvider = (props) => {
         items,
         setItems,
         refreshData,
+        clModal,
+        opModal,
+        modal
       }}
     >
       {props.children}

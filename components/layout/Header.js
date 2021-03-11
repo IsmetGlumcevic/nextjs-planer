@@ -4,11 +4,14 @@ import styles from "../../styles/Home.module.scss";
 import Link from "next/link";
 import { UserContext } from "../../context/UserContext";
 import { useRouter } from "next/router";
+import Clock from 'react-clock';
+import 'react-clock/dist/Clock.css';
 
 const Header = () => {
   const { loggedIn, userInfo } = useContext(UserContext);
   const [notification, setNotification] = useState("");
   const router = useRouter();
+  const [value, setValue] = useState(new Date());
 
   const handleLogout = () => {
     fire
@@ -22,6 +25,17 @@ const Header = () => {
       });
     router.push("/");
   };
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => setValue(new Date()),
+      1000
+    );
+
+    return () => {
+      clearInterval(interval);
+    }
+  }, []);
 
   return (
     <header className={styles.header}>
@@ -57,6 +71,9 @@ const Header = () => {
             )}
           </div>
         </div>
+      </div>
+      <div className={styles.clock}>
+        <Clock renderNumbers secondHandLength={80} value={value} />
       </div>
     </header>
   );

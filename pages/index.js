@@ -7,47 +7,132 @@ import moment from "moment";
 import { StoreContext } from "../context/StoreContext";
 import fire from "../config/fire-config";
 import { RRule, RRuleSet, rrulestr } from "rrule";
+import CalendarModal from "../components/calendar/Modal";
 
 moment.locale("bs-BS");
 const localizer = momentLocalizer(moment);
 
 export default function Home() {
-  const { items, setItems } = useContext(StoreContext);
+  const { items, setItems, modal, opModal, clModal } = useContext(StoreContext);
   const [events, setEvents] = useState([]);
   const [loader, setLoader] = useState(false);
-  const [boja, setBoja] = useState('#dddddd');
-  const [repeateType, setRepeateType] = useState('NONE');
+  const [itemId, setItemId] = useState(0);
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [boja, setBoja] = useState("#dddddd");
+  const [repeateType, setRepeateType] = useState("NONE");
+  const [textRepeateType, setTextRepeateType] = useState("Ne ponavljati");
   const [notification, setNotification] = useState(null);
+  // const [modal, setModal] = useState(false);
+  const [modalType, setModalType] = useState("create");
 
   const handleSelect = ({ start, end }) => {
-    const title = window.prompt("New Event name");
-    let eventObj = {
-      start,
-      end,
-      title,
-      allDay: false,
-    };
-    if (title) {
-      setEvents((oldEvent) => [...oldEvent, eventObj]);
-      saveEvent(eventObj)
-    }
+    setStartDate(moment(start).toDate());
+    setEndDate(moment(end).toDate());
+    opModal();
+  };
+
+  const closeModal = () => {
+    setModalType("create");
+    setTitle("");
+    setSummary("");
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setBoja("#dddddd");
+    setRepeateType("NONE");
+    setTextRepeateType("Ne ponavljati");
+    clModal();
   };
 
   const saveEvent = async (event) => {
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
+    let starts = moment(startDate).toDate();
+    let ends = moment(endDate).toDate();
+    const isoDate = new Date(startDate);
+    let eventObj = {
+      start: starts,
+      end: ends,
+      title,
+      allDay: false,
+    };
+    setItems((oldEvent) => [...oldEvent, eventObj]);
+    if (title != "") {
+      return db
+        .collection("events")
+        .doc(user.uid)
+        .collection("eventrows")
+        .doc()
+        .set({
+          title: title,
+          summary: summary,
+          date: isoDate.toISOString().split('T')[0],
+          startDate: starts,
+          endDate: ends,
+          createdAt: new Date(),
+          selected: true,
+          marked: true,
+          duration: "",
+          color: boja,
+          dotColor: "#fffff",
+          textColor: "#33333",
+          repeateType: repeateType,
+          repeate: repeateType == "NONE" ? false : true,
+        })
+        .then(() => {
+          setModal(false);
+          setNotification("Uspješno ste snimili event!");
+        });
+    }
+  };
+
+  const handleEdit = (itemEvent) => {
+    setItemId(itemEvent.id);
+    setTitle(itemEvent.title);
+    setSummary(itemEvent.summary);
+    setStartDate(itemEvent.start);
+    setEndDate(itemEvent.end);
+    setBoja(itemEvent.color);
+    setRepeateType(itemEvent.repeateType);
+    if (itemEvent.repeateType == "DAILY") {
+      setTextRepeateType("Dnevno");
+    } else if (itemEvent.repeateType == "WEEKLY") {
+      setTextRepeateType("Sedmično");
+    } else if (itemEvent.repeateType == "MONTHLY") {
+      setTextRepeateType("Mjesečno");
+    } else if (itemEvent.repeateType == "YEARLY") {
+      setTextRepeateType("Godišnje");
+    }
+    setModalType("edit");
+    opModal();
+  };
+
+  const editEvent = async (id) => {
+    let user = await fire.auth().currentUser;
+    let db = fire.firestore();
+    let starts = moment(startDate).toDate();
+    let ends = moment(endDate).toDate();
+    const isoDate = new Date(startDate);
+    let eventObj = {
+      start: starts,
+      end: ends,
+      title,
+      allDay: false,
+    };
     return db
       .collection('events')
       .doc(user.uid)
       .collection('eventrows')
-      .doc()
-      .set({
-        title: event.title,
-        summary: 'summary',
-        date: new Date(),
-        startDate: event.start,
-        endDate: event.end,
-        createdAt: new Date(),
+      .doc(id)
+      .update({
+        title: title,
+        summary: summary,
+        startDate: starts,
+        date: isoDate.toISOString().split('T')[0],
+        endDate: ends,
+        editedAt: new Date(),
         selected: true,
         marked: true,
         duration: '',
@@ -58,7 +143,27 @@ export default function Home() {
         repeate: repeateType == 'NONE' ? false : true,
       })
       .then(() => {
-        setNotification('Uspješno ste snimili event!');
+        const newItems = items.filter(it => it.id != id)
+        setItems(() => [...newItems, eventObj]);
+        closeModal();
+        setNotification('Uspješno ste uredili događaj!');
+      });
+  };
+
+  const deleteEvent = async (id) => {
+    let user = await fire.auth().currentUser;
+    let db = fire.firestore();
+    return db
+      .collection('events')
+      .doc(user.uid)
+      .collection('eventrows')
+      .doc(id)
+      .delete()
+      .then(() => {
+        const newItems = items.filter(it => it.id != id)
+        setItems(newItems);
+        closeModal();
+        setNotification('Uspješno ste izbisali događaj!');
       });
   };
 
@@ -67,7 +172,8 @@ export default function Home() {
     let db = fire.firestore();
     if (user) {
       const lists = [];
-      const data = await db.collection("events")
+      const data = await db
+        .collection("events")
         .doc(user.uid)
         .collection("eventrows")
         .get()
@@ -234,17 +340,21 @@ export default function Home() {
           });
           setEvents(lists);
           setLoader(false);
-          setItems(lists)
+          setItems(lists);
         });
     } else {
       console.log("nema");
     }
   };
 
+  const openModal = () => {
+    opModal();
+  };
+
   useEffect(() => {
     setTimeout(() => {
       fun();
-    }, 2000);
+    }, 1000);
   }, []);
 
   return (
@@ -255,6 +365,30 @@ export default function Home() {
       </Head>
       <main className={styles.main}>
         <div>
+          {modal ? (
+            <CalendarModal
+              closeModal={closeModal}
+              saveEvent={saveEvent}
+              editEvent={editEvent}
+              deleteEvent={deleteEvent}
+              itemId={itemId}
+              setTitle={setTitle}
+              title={title}
+              summary={summary}
+              setSummary={setSummary}
+              boja={boja}
+              setBoja={setBoja}
+              setStartDate={setStartDate}
+              startDate={startDate}
+              setEndDate={setEndDate}
+              endDate={endDate}
+              textRepeateType={textRepeateType}
+              setRepeateType={setRepeateType}
+              setTextRepeateType={setTextRepeateType}
+              modalType={modalType}
+              setModalType={setModalType}
+            />
+          ) : null}
           {notification}
           {loader ? (
             <h1>loading......</h1>
@@ -263,7 +397,7 @@ export default function Home() {
               localizer={localizer}
               events={items}
               selectable
-              onSelectEvent={(event) => alert(event.title)}
+              onSelectEvent={(itemEvent) => handleEdit(itemEvent)}
               onSelectSlot={handleSelect}
               style={{ height: 500 }}
               culture="bs"
