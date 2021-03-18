@@ -25,7 +25,7 @@ const Sidebar = () => {
               <a className={styles.sidebarLinks}>Zadaci</a>
             </Link>
             {router.pathname == "/todos" ? (
-            <div className={styles.sidebarLink}>Napravi zadatak</div>
+            <div onClick={opModal} className={styles.sidebarLink}>Napravi zadatak</div>
             ) : null }
             <Link href="/notes">
               <a className={styles.sidebarLinks}>Biljške</a>
