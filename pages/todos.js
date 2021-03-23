@@ -6,10 +6,12 @@ import fire from "../config/fire-config";
 import useSWR from "swr";
 import TodoModal from "../components/todos/Modal";
 import { StoreContext } from "../context/StoreContext";
+import NotificationContext from '../context/NotificationContext';
 import moment from "moment";
 
 export default function Todos() {
   const { modal, opModal, clModal } = useContext(StoreContext);
+  const notificationCtx = useContext(NotificationContext);
   const [catTitle, setCatitle] = useState("home");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -21,7 +23,6 @@ export default function Todos() {
   const [todosLenght, setTodosLenhgt] = useState(0);
   const [name, setName] = useState();
   const [modalType, setModalType] = useState("create");
-  const [notification, setNotification] = useState(null);
 
   const { data, error } = useSWR("/api/hello");
 
@@ -87,6 +88,11 @@ export default function Todos() {
   };
 
   const saveTodo = async () => {
+    notificationCtx.showNotification({
+      title: 'Snimanje',
+      message: 'Zadatak se snima...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     let endDate = moment(startDate).toDate();
@@ -116,12 +122,28 @@ export default function Todos() {
         })
         .then(() => {
           closeModal();
-          setNotification("Uspješno ste snimili event!");
+          notificationCtx.showNotification({
+            title: 'Uspješno!',
+            message: 'Zadatak je uspješno snimljen!',
+            status: 'success',
+          });
+        })
+        .catch((error) => {
+          notificationCtx.showNotification({
+            title: 'Greška!',
+            message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+            status: 'error',
+          });
         });
     }
   };
 
   const deleteTodo = async (id) => {
+    notificationCtx.showNotification({
+      title: 'Brisanje',
+      message: 'Zadatak se briše...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     db.collection("todos")
@@ -131,15 +153,31 @@ export default function Todos() {
       .delete()
       .then(() => {
         closeModal();
-        setNotification("Uspješno ste izbisali događaj!");
         const newData = [...todos];
         const prevIndex = todos.findIndex((item) => item.id === id);
         newData.splice(prevIndex, 1);
         setTodos(newData);
+        notificationCtx.showNotification({
+          title: 'Uspješno!',
+          message: 'Zadatak je uspješno izbrisan!',
+          status: 'success',
+        });
+      })
+      .catch((error) => {
+        notificationCtx.showNotification({
+          title: 'Greška!',
+          message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+          status: 'error',
+        });
       });
   };
 
   const editTodo = async (id) => {
+    notificationCtx.showNotification({
+      title: 'Uređivanje',
+      message: 'Zadatak se uređuje...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     let endDate = moment(startDate).toDate();
@@ -161,11 +199,22 @@ export default function Todos() {
       })
       .then(() => {
         closeModal();
-        setNotification("Uspješno ste izbisali događaj!");
+        notificationCtx.showNotification({
+          title: 'Uspješno!',
+          message: 'Zadatak je uspješno uređen!',
+          status: 'success',
+        });
         if (category == catTitle) {
           const newItems = todos.filter((it) => it.id != id);
           setTodos(() => [...newItems, eventObj]);
         }
+      })
+      .catch((error) => {
+        notificationCtx.showNotification({
+          title: 'Greška!',
+          message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+          status: 'error',
+        });
       });
   };
 
@@ -253,7 +302,6 @@ export default function Todos() {
             itemId={itemId}
             modalType={modalType}
             setModalType={setModalType}
-            setNotification={setNotification}
             saveTodo={saveTodo}
             deleteTodo={deleteTodo}
             editTodo={editTodo}

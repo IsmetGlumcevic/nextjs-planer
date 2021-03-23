@@ -8,6 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^26.0.0",
+    "@ckeditor/ckeditor5-react": "^3.0.2",
+    "@tinymce/tinymce-react": "^3.10.4",
     "firebase": "^8.2.7",
     "moment": "^2.29.1",
     "next": "10.0.7",
@@ -18,6 +21,7 @@
     "react-datetime-picker": "^3.1.0",
     "react-day-picker": "^7.4.8",
     "react-dom": "17.0.1",
+    "react-rte": "^0.16.3",
     "rrule": "^2.6.8",
     "sass": "^1.32.7",
     "swr": "^0.5.3"

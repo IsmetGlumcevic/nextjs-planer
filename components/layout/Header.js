@@ -41,12 +41,16 @@ const Header = () => {
     <header className={styles.header}>
       <div className={styles.headerContainer}>
         <div className={styles.headerBox}>
-          <div className="logo">
+          <div className={styles.headerLogo}>
             <Link href="/">
               <a>Moj Planer</a>
             </Link>
           </div>
-          <div>{notification}</div>
+          <div className={styles.headerContact}>
+            <Link href="/contact">
+              <a>Kontakt</a>
+            </Link>
+          </div>
           <div className="authBtn">
             {!loggedIn ? (
               <div className={styles.loginBtn}>

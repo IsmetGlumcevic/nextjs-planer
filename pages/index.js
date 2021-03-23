@@ -5,6 +5,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import { StoreContext } from "../context/StoreContext";
+import NotificationContext from '../context/NotificationContext';
 import fire from "../config/fire-config";
 import { RRule, RRuleSet, rrulestr } from "rrule";
 import CalendarModal from "../components/calendar/Modal";
@@ -14,6 +15,7 @@ const localizer = momentLocalizer(moment);
 
 export default function Home() {
   const { items, setItems, modal, opModal, clModal } = useContext(StoreContext);
+  const notificationCtx = useContext(NotificationContext);
   const [events, setEvents] = useState([]);
   const [loader, setLoader] = useState(false);
   const [itemId, setItemId] = useState(0);
@@ -47,6 +49,11 @@ export default function Home() {
   };
 
   const saveEvent = async (event) => {
+    notificationCtx.showNotification({
+      title: 'Snimanje',
+      message: 'Događaj se snima...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     let starts = moment(startDate).toDate();
@@ -82,8 +89,19 @@ export default function Home() {
           repeate: repeateType == "NONE" ? false : true,
         })
         .then(() => {
-          setModal(false);
-          setNotification("Uspješno ste snimili event!");
+          closeModal();
+          notificationCtx.showNotification({
+            title: 'Uspješno!',
+            message: 'Događaj je uspješno snimljen!',
+            status: 'success',
+          });
+        })
+        .catch((error) => {
+          notificationCtx.showNotification({
+            title: 'Greška!',
+            message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+            status: 'error',
+          });
         });
     }
   };
@@ -110,6 +128,11 @@ export default function Home() {
   };
 
   const editEvent = async (id) => {
+    notificationCtx.showNotification({
+      title: 'Uređivanje',
+      message: 'Događaj se uređuje...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     let starts = moment(startDate).toDate();
@@ -146,11 +169,27 @@ export default function Home() {
         const newItems = items.filter(it => it.id != id)
         setItems(() => [...newItems, eventObj]);
         closeModal();
-        setNotification('Uspješno ste uredili događaj!');
+        notificationCtx.showNotification({
+          title: 'Uspješno!',
+          message: 'Događaj je uspješno uređen!',
+          status: 'success',
+        });
+      })
+      .catch((error) => {
+        notificationCtx.showNotification({
+          title: 'Greška!',
+          message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+          status: 'error',
+        });
       });
   };
 
   const deleteEvent = async (id) => {
+    notificationCtx.showNotification({
+      title: 'Brisanje',
+      message: 'Događaj se briše...',
+      status: 'pending',
+    });
     let user = await fire.auth().currentUser;
     let db = fire.firestore();
     return db
@@ -163,7 +202,18 @@ export default function Home() {
         const newItems = items.filter(it => it.id != id)
         setItems(newItems);
         closeModal();
-        setNotification('Uspješno ste izbisali događaj!');
+        notificationCtx.showNotification({
+          title: 'Uspješno!',
+          message: 'Događaj je uspješno izbrisan!',
+          status: 'success',
+        });
+      })
+      .catch((error) => {
+        notificationCtx.showNotification({
+          title: 'Greška!',
+          message: error.message || 'Došlo je do greške! Pokušajte ponovo!',
+          status: 'error',
+        });
       });
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import styles from "../../styles/Home.module.scss";
+import styles from "../../styles/Modal.module.scss";
 import DateTimePicker from "react-datetime-picker/dist/entry.nostyle";
 import "../../node_modules/react-datetime-picker/dist/DateTimePicker.css";
 import "../../node_modules/react-calendar/dist/Calendar.css";
@@ -17,7 +17,6 @@ export default function TodoModal(props) {
     startDate,
     category,
     setCategory,
-    setNotification,
     saveTodo,
     deleteTodo,
     editTodo,
